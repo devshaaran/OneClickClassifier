@@ -25,7 +25,7 @@ def get_images():
     if os.path.exists(os.getcwd()+'/Data_files/'+final_for_file_name):
         try:
             os.remove(os.getcwd()+'/Data_files/'+final_for_file_name)
-        except PermissionError :
+        except Exception :
             pass
     else:
         os.mkdir(os.getcwd() + '/Data_files/' + final_for_file_name)
@@ -39,21 +39,28 @@ def get_images():
             print(e)
 
         try:
-            if os.path.exists(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + i + '/' + 'train'):
+            if os.path.exists(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + 'train'):
                 pass
             else:
-                os.mkdir(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + i + '/' + 'train')
+                os.mkdir(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + 'train')
 
-            if os.path.exists(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + i + '/' + 'valid'):
+            if os.path.exists(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + 'valid'):
                 pass
             else:
-                os.mkdir(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + i + '/' + 'valid')
+                os.mkdir(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + 'valid')
         except Exception as e:
             print(e)
 
     try:
+        if os.path.exists(os.getcwd() + '/temp'):
+            pass
+        else:
+            os.mkdir(os.getcwd()+'/temp')
+
+        os.rename(os.getcwd()+'/downloads',os.getcwd()+'/temp')
         os.remove(os.getcwd()+'/downloads')
-    except PermissionError :
+
+    except Exception :
         pass
 
     for k in os.listdir(os.getcwd() + '/Data_files/' + final_for_file_name):
@@ -61,19 +68,21 @@ def get_images():
         amount_files = len(main_lib)
         int_partition_calculator = int(amount_files*25/100)
         counter = 0
-        for j in os.listdir(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + k):
-            if j == 'valid' or j == 'train':
-                pass
-            else:
+        if k == 'valid' or k == 'train':
+            pass
+        else:
+            os.mkdir(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + 'valid' + '/' + k)
+            os.mkdir(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + 'train' + '/' + k)
+            for j in os.listdir(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + k):
                 if counter < int_partition_calculator:
                     try:
-                        os.rename(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + k + '/' + j,os.getcwd() + '/Data_files/' + final_for_file_name + '/' + k + '/' + 'valid' + '/' + j)
+                        os.rename(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + k + '/' + j,os.getcwd() + '/Data_files/' + final_for_file_name + '/' + 'valid' + '/' + k + '/' + j)
                         counter += 1
                     except Exception as e:
                         print(e)
                 else:
                     try:
-                        os.rename(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + k + '/' + j,os.getcwd() + '/Data_files/' + final_for_file_name + '/' + k + '/' + 'train' + '/' + j)
+                        os.rename(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + k + '/' + j,os.getcwd() + '/Data_files/' + final_for_file_name + '/' + 'train' + '/' + k + '/' + j)
                     except Exception as e :
                         print(e)
 
@@ -110,26 +119,26 @@ def train():
     learn.save('all')
     learn.load('all')
     print('Yay !! you have made your Classifier !')
-    g = input('please enter the place where your pic is stored')
+    g = input('please enter the place where your pic is stored : ')
     learn.load('all')
     trn_tfms, val_tfms = tfms_from_model(arch, sz)
     im = val_tfms(open_image(g))
     learn.precompute = False
     preds = learn.predict_array(im[None])
-    print(preds)
+    print(data.classes[np.argmax(preds)])
 
     while 1:
-        input_checker = input('would you like to continue (yes/no)')
-        if 'no' or 'n' in input_checker:
+        input_checker = input('would you like to continue (yes/no) : ')
+        if 'no' in input_checker or 'n' in input_checker:
             break
         else:
-            g = input('please enter the place where your pic is stored')
+            g = input('please enter the place where your pic is stored : ')
             learn.load('all')
             trn_tfms, val_tfms = tfms_from_model(arch, sz)
             im = val_tfms(open_image(g))
             learn.precompute = False
             preds = learn.predict_array(im[None])
-            print(preds)
+            print(data.classes[np.argmax(preds)])
 
 
 make_files_for_me()
