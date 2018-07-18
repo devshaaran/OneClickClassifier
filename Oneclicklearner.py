@@ -5,7 +5,8 @@ import numpy as np
 from fastai.conv_learner import *
 from fastai.model import *
 from fastai.dataset import *
-
+import cv2
+from PIL import Image
 sz = 224
 
 def get_images():
@@ -69,24 +70,60 @@ def get_images():
         int_partition_calculator = int(amount_files*25/100)
         counter = 0
         if k == 'valid' or k == 'train':
+            global back_path
+            back_path = os.getcwd()
+            os.chdir(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + k + '/')
             pass
+
         else:
-            os.mkdir(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + 'valid' + '/' + k)
-            os.mkdir(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + 'train' + '/' + k)
-            for j in os.listdir(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + k):
+            if os.path.exists(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + 'valid' + '/' + k):
+                inital = input('it seems this file already exists would you like to contnue (y/n)')
+                if inital == 'n' or inital == 'no':
+                    break
+                else:
+                    pass
+            else:
+                os.mkdir(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + 'valid' + '/' + k)
+                os.mkdir(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + 'train' + '/' + k)
+
+            back_path = os.getcwd()
+            os.chdir(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + k + '/')
+
+            for j in os.listdir(back_path + '/Data_files/' + final_for_file_name + '/' + k):
                 if counter < int_partition_calculator:
-                    try:
-                        os.rename(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + k + '/' + j,os.getcwd() + '/Data_files/' + final_for_file_name + '/' + 'valid' + '/' + k + '/' + j)
-                        counter += 1
-                    except Exception as e:
-                        print(e)
+                    print(j)
+                    print(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + k + '/' + j)
+                    im = Image.open(back_path+ '/Data_files/' + final_for_file_name + '/' + k + '/' + j)
+                    width, height = im.size
+                    img = cv2.imread(back_path+ '/Data_files/' + final_for_file_name + '/' + k + '/' + j)
+                    if width <650 and height < 650:
+                        resized_v = cv2.resize(img,(256,256))
+                    elif width > 1000 and height < 1000:
+                        resized_v = cv2.resize(cv2.resize(img,(0,0),fx = 0.6 ,fy=1), (256, 256))
+                    elif width < 1000 and height > 1000:
+                        resized_v = cv2.resize(cv2.resize(img, (0,0), fx=1, fy=0.6), (256, 256))
+                    elif width > 1000 and height > 1000:
+                        resized_v = cv2.resize(cv2.resize(img, (0,0), fx=0.6, fy=0.6), (256, 256))
+                    else:
+                        resized_v = cv2.resize(img, (256, 256))
+
+                    converted = cv2.cvtColor(resized_v,cv2.COLOR_BGR2RGB)
+                    cv2.imwrite(j,converted)
+                    os.rename(back_path + '/Data_files/' + final_for_file_name + '/' + k + '/' + j,back_path + '/Data_files/' + final_for_file_name + '/' + 'valid' + '/' + k + '/' + j)
+                    counter += 1
                 else:
                     try:
+                        print(j)
+                        print(back_path + '/Data_files/' + final_for_file_name + '/' + k + '/' + j)
+                        img = cv2.imread(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + k + '/' + j)
+                        resized_v = cv2.resize(img, (256, 256))
+                        converted = cv2.cvtColor(resized_v, cv2.COLOR_BGR2RGB)
+                        cv2.imwrite(j, converted)
                         os.rename(os.getcwd() + '/Data_files/' + final_for_file_name + '/' + k + '/' + j,os.getcwd() + '/Data_files/' + final_for_file_name + '/' + 'train' + '/' + k + '/' + j)
                     except Exception as e :
                         print(e)
 
-
+    os.chdir(back_path)
     global PATH
     PATH = os.getcwd() + '/Data_files/' + final_for_file_name
 def make_files_for_me():
@@ -101,38 +138,41 @@ def make_files_for_me():
 
 
 def train():
-    os.chdir(PATH)
-    arch = resnet34
-    tfms = tfms_from_model(sz=sz,f_model= arch,aug_tfms=transforms_side_on,max_zoom=1.1)
-    data = ImageClassifierData.from_paths(PATH,tfms=tfms)
-    learn = ConvLearner.pretrained(arch,data,precompute=True)
-    learn.fit(0.01,2)
-    learn.save('elementary')
-    learn.load('elementary')
-    learn.precompute = False
-    learn.fit(0.01,1,cycle_len=1)
-    learn.save('lastlayer')
-    learn.load('lastlayer')
-    learn.unfreeze()
-    lrf = np.array([1e-4,1e-3,1e-2])
-    learn.fit(lrf,1,cycle_len=1,cycle_mult=2)
-    learn.save('all')
-    learn.load('all')
-    print('Yay !! you have made your Classifier !')
-    g = input('please enter the place where your pic is stored : ')
-    learn.load('all')
-    trn_tfms, val_tfms = tfms_from_model(arch, sz)
-    im = val_tfms(open_image(g))
-    learn.precompute = False
-    preds = learn.predict_array(im[None])
-    print(data.classes[np.argmax(preds)])
+
+    try:
+        os.chdir(PATH)
+        print(os.getcwd())
+        global arch
+        arch = resnet34
+        tfms = tfms_from_model(sz=sz,f_model= arch,aug_tfms=transforms_side_on,max_zoom=1.1)
+        global data
+        data = ImageClassifierData.from_paths(PATH,tfms=tfms)
+        global learn
+        learn = ConvLearner.pretrained(arch,data,precompute=True)
+        learn.precompute = False
+        learn.unfreeze()
+        lrf = np.array([1e-4,1e-3,1e-2])
+        learn.fit(lrf,1,cycle_len=1,cycle_mult=2)
+        learn.save('all')
+        learn.load('all')
+        print('Yay !! you have made your Classifier !')
+        g = input('please enter the place where your pic is stored : ')
+        learn.load('all')
+        trn_tfms, val_tfms = tfms_from_model(arch, sz)
+        im = val_tfms(open_image(g))
+        learn.precompute = False
+        preds = learn.predict_array(im[None])
+        print(data.classes[np.argmax(preds)])
+
+    except Exception as e :
+        print(e)
 
     while 1:
         input_checker = input('would you like to continue (yes/no) : ')
         if 'no' in input_checker or 'n' in input_checker:
             break
         else:
-            g = input('please enter the place where your pic is stored : ')
+            g = input('please enter the place where your pic is stored')
             learn.load('all')
             trn_tfms, val_tfms = tfms_from_model(arch, sz)
             im = val_tfms(open_image(g))
@@ -140,7 +180,6 @@ def train():
             preds = learn.predict_array(im[None])
             print(data.classes[np.argmax(preds)])
 
-
 make_files_for_me()
 get_images()
-train()
+
