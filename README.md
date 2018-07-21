@@ -19,7 +19,7 @@ The easiest way to create your own world class classifiers , just type the name 
 
 * download any file from the internet for testing the model 
 
-* paste the path and test it for yourself
+* paste the path (don't make it look like a string , no quotes needed*) and test it for yourself
 
 ## Recommendation
 
